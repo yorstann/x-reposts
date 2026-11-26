@@ -16,6 +16,22 @@ try {
   fs.mkdirSync(outDir, { recursive: true });
   fs.copyFileSync(source, target);
   console.log(`Copied ${source} -> ${target}`);
+
+  // Guard the gate against a malformed list: the copied file must parse as
+  // JSON with a "posts" array of 1-15 URL strings.
+  const parsed = JSON.parse(fs.readFileSync(target, "utf8"));
+  const posts = parsed?.posts;
+  if (
+    !Array.isArray(posts) ||
+    posts.length < 1 ||
+    posts.length > 15 ||
+    posts.some((p) => typeof p !== "string" || !p.startsWith("https://"))
+  ) {
+    throw new Error(
+      `Invalid POSTS.json: expected a "posts" array of 1-15 URL strings, got ${JSON.stringify(parsed)}`,
+    );
+  }
+  console.log(`Verified ${target}: ${posts.length} post URLs`);
 } catch (error) {
   console.error(`Failed to copy ${source} to ${target}: ${error}`);
   process.exit(1);
